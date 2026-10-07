@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>交換生活支出 · Boarding Pass</title>
+<style>
+:root{--bg:#d6e0ea;--ink:#13233f;--paper:#fffdf7;--mute:#6b7a90;--line:#13233f;--hi:#f2c230}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;padding:16px}
+.wrap{max-width:980px;margin:0 auto;display:grid;gap:16px}
+.mono{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.t{background:var(--paper);border:2px solid var(--line);border-radius:14px;padding:18px 20px;position:relative}
+.t.n::before,.t.n::after{content:"";position:absolute;top:50%;width:22px;height:22px;background:var(--bg);border:2px solid var(--line);border-radius:50%;margin-top:-11px}
+.t.n::before{left:-13px}.t.n::after{right:-13px}
+h1{margin:0;font-size:clamp(26px,5vw,40px);letter-spacing:.02em}
+h2{margin:0 0 12px;font-size:17px}
+.sub{color:var(--mute);font-size:13px}
+.hero{display:grid;grid-template-columns:1fr auto;gap:0 24px;background:var(--ink);color:#fff;border-color:var(--ink)}
+.hero .big{font-size:clamp(44px,11vw,88px);font-weight:800;line-height:1;margin:10px 0 6px;color:var(--hi)}
+.hero .meta{display:grid;gap:4px;border-left:2px dashed #ffffff55;padding-left:20px;align-content:center;min-width:150px}
+.hero .meta b{font-size:22px;display:block}
+.hero .meta span{font-size:12px;color:#b9c6da}
+.bar{background:repeating-linear-gradient(90deg,#fff 0 2px,transparent 2px 5px,#fff 5px 6px,transparent 6px 10px);height:26px;opacity:.5;margin-top:12px;grid-column:1/-1}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{border:2px solid var(--line);background:#fff;border-radius:999px;padding:3px 12px;font:inherit;cursor:pointer;color:var(--ink)}
+.chip.on{background:var(--ink);color:#fff}
+.chip:focus-visible,input:focus-visible,button:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+.sw{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:13px}
+.g2{display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:center}
+.cat{display:grid;grid-template-columns:14px 1fr auto;gap:2px 10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px dashed #13233f44;padding:7px 4px;cursor:pointer;font:inherit;color:var(--ink)}
+.cat.on{background:#f2c23033}.cat.dim{opacity:.35}
+.cat i{width:14px;height:14px;border-radius:3px;grid-row:1/3}
+.cat .bg{grid-column:2/4;height:5px;background:#13233f14;border-radius:3px}.cat .bg u{display:block;height:100%;border-radius:3px}
+.cat small{color:var(--mute)}
+svg text{font-family:inherit}
+#cal{overflow-x:auto}
+.cell{cursor:default}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;border-bottom:2px solid var(--line);padding:6px 4px}
+td{padding:6px 4px;border-bottom:1px dashed #13233f33}
+td.r,th.r{text-align:right}
+input[type=search]{border:2px solid var(--line);border-radius:8px;padding:6px 10px;font:inherit;background:#fff;width:200px;max-width:100%}
+.pay{display:grid;gap:8px}.pay div{display:grid;grid-template-columns:48px 1fr 90px;gap:8px;align-items:center}
+.pay u{display:block;height:14px;background:var(--ink);border-radius:3px}
+.tag{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px}
+@media(max-width:640px){.g2{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero .meta{border-left:0;border-top:2px dashed #ffffff55;padding:12px 0 0;margin-top:8px;grid-template-columns:repeat(3,1fr)}.sw{margin-left:0}}
+</style></head><body><div class="wrap" id="app"></div>
+<script src="data.js"></script>
+<script>
+const ALL=DATA.rows,HN=DATA.meta.hasNotes;let R,MONTHS,CORE;
+const fmt=n=>Math.round(n).toLocaleString('en-US'),sum=a=>a.reduce((s,r)=>s+r.a,0);
+const tot={};ALL.forEach(r=>tot[r.c]=(tot[r.c]||0)+r.a);
+const CATS=Object.keys(tot).sort((a,b)=>tot[b]-tot[a]);
+const PAL=['#2b59c3','#f2c230','#d9483b','#1f9d8a','#7b4fb5','#f08a3c','#13233f','#c2438a','#7f9a2c','#4fa3d9','#8a6a4a'];
+const col=c=>PAL[CATS.indexOf(c)%PAL.length];
+const ml=m=>(m<'2026'?m.slice(2,4)+'年':'')+(+m.slice(5))+'月';
+let st={m:'all',c:null,q:'',notes:false,flight:true,more:40,first:true};
+function setup(){R=ALL.filter(r=>st.flight||!r.o);CORE=R.filter(r=>!r.o);MONTHS=[...new Set(R.map(r=>r.d.slice(0,7)))].sort();if(st.m!=='all'&&!MONTHS.includes(st.m))st.m='all'}
+setup();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function arcs(rows){
+  const T=sum(rows)||1,C=2*Math.PI*60;let off=0;
+  const by={};rows.forEach(r=>by[r.c]=(by[r.c]||0)+r.a);
+  const s=CATS.filter(c=>by[c]).map(c=>{const l=by[c]/T*C,o=off;off+=l;
+    return `<circle r="60" cx="90" cy="90" fill="none" stroke="${col(c)}" stroke-width="${st.c===c?34:26}" stroke-dasharray="${l} ${C-l}" stroke-dashoffset="${-o}" transform="rotate(-90 90 90)" opacity="${st.c&&st.c!==c?.3:1}" style="cursor:pointer" onclick="pickC('${c}')"><title>${c} ${fmt(by[c])}</title></circle>`}).join('');
+  return `<svg viewBox="0 0 180 180" width="100%" style="max-width:230px" role="img" aria-label="類別占比">${s}<text x="90" y="86" text-anchor="middle" font-size="11" fill="#6b7a90">${st.c||'全部類別'}</text><text x="90" y="106" text-anchor="middle" font-size="16" font-weight="700" fill="#13233f">${fmt(sum(st.c?rows.filter(r=>r.c===st.c):rows))}</text></svg>`}
+function stack(rows){
+  const mm=MONTHS.map(m=>{const rs=rows.filter(r=>r.d.startsWith(m)),by={};rs.forEach(r=>by[r.c]=(by[r.c]||0)+r.a);return{m,by,t:sum(rs)}});
+  const mx=Math.max(...mm.map(x=>x.t),1),W=560,H=210,bw=W/mm.length;
+  return `<svg viewBox="0 0 ${W} ${H+28}" width="100%" role="img" aria-label="月別支出">`+mm.map((x,i)=>{
+    let y=H;const bx=i*bw+bw*.18,w=bw*.64;
+    const rs=CATS.filter(c=>x.by[c]).map(c=>{const h=x.by[c]/mx*(H-18);y-=h;return `<rect x="${bx}" y="${y}" width="${w}" height="${h}" fill="${col(c)}" opacity="${st.c&&st.c!==c?.25:1}"><title>${ml(x.m)} ${c} ${fmt(x.by[c])}</title></rect>`}).join('');
+    return `<g style="cursor:pointer" onclick="pickM('${x.m}')">${rs}<text x="${bx+w/2}" y="${y-5}" text-anchor="middle" font-size="11" fill="#13233f">${fmt(x.t/1000)}k</text><text x="${bx+w/2}" y="${H+18}" text-anchor="middle" font-size="12" font-weight="${st.m===x.m?800:400}" fill="#13233f">${ml(x.m)}</text></g>`}).join('')+`<line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="#13233f" stroke-width="2"/></svg>`}
+function cal(rows){
+  const day={};rows.forEach(r=>day[r.d]=(day[r.d]||0)+r.a);
+  const v=Object.values(day).sort((a,b)=>a-b),cap=v[Math.floor(v.length*.9)]||1;
+  const s=new Date(CORE[CORE.length-1].d+'T00:00'),e=new Date(CORE[0].d+'T00:00');
+  s.setDate(s.getDate()-((s.getDay()+6)%7));
+  let out='',x=0;
+  for(let d=new Date(s);d<=e;d.setDate(d.getDate()+1)){
+    const k=d.toISOString?[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'):'';
+    const i=(d.getDay()+6)%7,w=Math.floor((d-s)/6048e5),a=day[k]||0;
+    const o=a?Math.min(1,.2+.8*Math.sqrt(a/cap)):0;
+    out+=`<rect class="cell" x="${w*16}" y="${i*16+14}" width="13" height="13" rx="3" fill="${a?'#2b59c3':'#13233f12'}" opacity="${a?o:1}"><title>${k} ${a?fmt(a):'無記帳'}</title></rect>`;
+    if(d.getDate()===1||(w===0&&i===0))out+=`<text x="${w*16}" y="10" font-size="10" fill="#6b7a90">${d.getMonth()+1}月</text>`;x=w}
+  return `<svg viewBox="0 0 ${(x+1)*16} 128" style="min-width:${(x+1)*16}px;height:128px" role="img" aria-label="每日支出熱力圖">${out}</svg>`}
+function render(){
+  const rM=R.filter(r=>st.m==='all'||r.d.startsWith(st.m)),rC=st.c?rM.filter(r=>r.c===st.c):rM;
+  const rT=rC.filter(r=>!st.q||(r.c+r.n+r.d).includes(st.q));
+  const T=sum(rC),days=new Set(rC.map(r=>r.d)).size;
+  const span=st.m==='all'?Math.round((new Date(CORE[0].d)-new Date(CORE[CORE.length-1].d))/864e5)+1:new Date(+st.m.slice(0,4),+st.m.slice(5),0).getDate();
+  const byC={};rM.forEach(r=>byC[r.c]=(byC[r.c]||0)+r.a);const TM=sum(rM)||1;
+  const byP={};rC.forEach(r=>byP[r.p]=(byP[r.p]||0)+r.a);const pm=Math.max(...Object.values(byP),1);
+  const label=(st.m==='all'?'全期間':ml(st.m))+(st.c?' · '+st.c:'');
+  $('#app').innerHTML=`
+  <header class="t hero n"><div><div class="mono" style="color:#b9c6da;font-size:13px">EXCHANGE PASS · TAIWAN ⇄ EUROPE</div>
+  <h1>我的交換生活花費</h1><div class="big mono" id="tot">NT$ ${fmt(T)}</div><div style="color:#b9c6da">${label}</div></div>
+  <div class="meta"><div><b class="mono">${fmt(T/span)}</b><span>平均每天</span></div><div><b class="mono">${rC.length}</b><span>筆消費</span></div><div><b class="mono">${days}</b><span>天有記帳</span></div></div><div class="bar"></div></header>
+  <section class="t"><div class="ctrl"><button class="chip ${st.m==='all'?'on':''}" onclick="pickM('all')">全部</button>${MONTHS.map(m=>`<button class="chip ${st.m===m?'on':''}" onclick="pickM('${m}')">${ml(m)}</button>`).join('')}
+  <label class="sw"><input type="checkbox" ${st.flight?'checked':''} onchange="st.flight=this.checked;setup();render()">含來回機票（約32,000）</label>
+  ${HN?`<label class="sw" style="margin-left:0"><input type="checkbox" ${st.notes?'checked':''} onchange="st.notes=this.checked;render()">顯示備註</label>`:''}</div></section>
+  <section class="t n"><h2>類別去哪了 <span class="sub">點選類別可篩選整頁</span></h2><div class="g2"><div>${arcs(rM)}</div><div>
+  ${CATS.filter(c=>byC[c]).sort((a,b)=>byC[b]-byC[a]).map(c=>`<button class="cat ${st.c===c?'on':''} ${st.c&&st.c!==c?'dim':''}" onclick="pickC('${c}')"><i style="background:${col(c)}"></i><span>${c} <small>${rM.filter(r=>r.c===c).length} 筆</small></span><b class="mono">${fmt(byC[c])} <small>${(byC[c]/TM*100).toFixed(1)}%</small></b><div class="bg"><u style="width:${byC[c]/Math.max(...Object.values(byC))*100}%;background:${col(c)}"></u></div></button>`).join('')}</div></div></section>
+  <section class="t"><h2>每月航程 <span class="sub">點月份篩選</span></h2>${stack(R.filter(r=>!st.c||r.c===st.c))}</section>
+  <section class="t"><h2>每日足跡 <span class="sub">顏色越深花越多</span></h2><div id="cal">${cal(CORE.filter(r=>!st.c||r.c===st.c))}</div></section>
+  <section class="t"><h2>付款方式</h2><div class="pay">${Object.entries(byP).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div><span>${k}</span><u style="width:${v/pm*100}%"></u><b class="mono" style="text-align:right">${fmt(v)}</b></div>`).join('')}</div><div class="sub" style="margin-top:8px">「估」為補記的概估款項</div></section>
+  <section class="t"><div class="ctrl" style="margin-bottom:8px"><h2 style="margin:0">明細</h2><input type="search" placeholder="搜尋類別${st.notes?'、備註':''}、日期" value="${esc(st.q)}" oninput="st.q=this.value;st.more=40;render();const i=document.querySelector('input[type=search]');i.focus();i.setSelectionRange(99,99)"></div>
+  <div style="overflow-x:auto"><table><tr><th>日期</th><th>類別</th>${st.notes?'<th>備註</th>':''}<th class="r">金額</th></tr>
+  ${rT.slice(0,st.more).map(r=>`<tr><td class="mono">${r.d.slice(5)}</td><td><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${col(r.c)};margin-right:6px"></i>${r.c}</td>${st.notes?`<td>${esc(r.n)}${r.e?'<span class="tag">概估</span>':''}</td>`:''}<td class="r mono">${fmt(r.a)}</td></tr>`).join('')}</table></div>
+  ${rT.length>st.more?`<p style="text-align:center"><button class="chip" onclick="st.more+=60;render()">再顯示更多（剩 ${rT.length-st.more} 筆）</button></p>`:''}</section>
+  <footer class="sub" style="text-align:center">金額皆為新台幣 · 簽證保險與機票為補記概估</footer>`;
+  if(st.first){st.first=false;const el=$('#tot'),t0=performance.now();(function f(t){const p=Math.min(1,(t-t0)/900);el.textContent='NT$ '+fmt(T*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)})(t0)}}
+const $=s=>document.querySelector(s);
+function pickM(m){st.m=st.m===m?'all':m;st.more=40;render()}
+function pickC(c){st.c=st.c===c?null:c;st.more=40;render()}
+render();
+</script></body></html>
